@@ -86,21 +86,21 @@ namespace AutoXML_NS
                     AUTOXML_MDEBUG("Data type is std::string");
                     reinterpret_cast<std::string*>(address)->assign(data);
                 }
-                else if (is_convertible<T, int>::value) {
-                    AUTOXML_MDEBUG("Data type is int");
-                    *reinterpret_cast<int*>(address) = atoi(data);
-                }
                 else if (is_convertible<T, double>::value) {
-                    AUTOXML_MDEBUG("Data type is int");
+                    AUTOXML_MDEBUG("Data type is double");
                     *reinterpret_cast<double*>(address) = atof(data);
+                }
+                else if (is_convertible<T, long long>::value) {
+                    AUTOXML_MDEBUG("Data type is long long");
+                    *reinterpret_cast<long*>(address) = atoll(data);
                 }
                 else if (is_convertible<T, long>::value) {
                     AUTOXML_MDEBUG("Data type is long");
                     *reinterpret_cast<long*>(address) = atol(data);
                 }
-                else if (is_convertible<T, long long>::value) {
-                    AUTOXML_MDEBUG("Data type is long long");
-                    *reinterpret_cast<long*>(address) = atoll(data);
+                else if (is_convertible<T, int>::value) {
+                    AUTOXML_MDEBUG("Data type is int");
+                    *reinterpret_cast<int*>(address) = atoi(data);
                 }
                 return true;
             }
