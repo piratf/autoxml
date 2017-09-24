@@ -2,7 +2,6 @@
 #include <cstdarg>
 #include <string>
 #include "tinyxml.h"
-using namespace std;
 
 #define MERROR(format, ...) fprintf (stderr, "[%s](line %lu): " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 #define AUTOXML_MERROR(format, ...) MERROR(format "->[%s]:line %lu", ##__VA_ARGS__, m_strCurFile, m_sizeCurLine)
