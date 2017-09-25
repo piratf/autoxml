@@ -3,31 +3,79 @@
 #include <string>
 #include "tinyxml.h"
 
+#ifdef MERROR
+#error MERROR is already defined.
+#else
 #define MERROR(format, ...) fprintf (stderr, "[%s](line %lu): " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-#define AUTOXML_MERROR(format, ...) MERROR(format "->[%s]:line %lu", ##__VA_ARGS__, m_strCurFile, m_sizeCurLine)
-#define AUTOXML_MDEBUG(format, ...) MDEBUG(format "->[%s]:line %lu", ##__VA_ARGS__, m_strCurFile, m_sizeCurLine)
+#endif
+
+#ifdef MDEBUG
+#error MDEBUG is already defined.
+#else
 #ifdef DEBUG
 #define MDEBUG(format, ...) fprintf (stdout, "[%s](line %lu): " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 #else
 #define MDEBUG(format, ...) void(0)
 #endif
+#endif
+
+#ifdef AUTOXML_MERROR
+#error AUTOXML_MERROR is already defined.
+#else
+#define AUTOXML_MERROR(format, ...) MERROR(format "->[%s]:line %lu", ##__VA_ARGS__, m_strCurFile, m_sizeCurLine)
+#endif
+
+#ifdef AUTOXML_MDEBUG
+#error AUTOXML_MDEBUG is already defined.
+#else
+#define AUTOXML_MDEBUG(format, ...) MDEBUG(format "->[%s]:line %lu", ##__VA_ARGS__, m_strCurFile, m_sizeCurLine)
+#endif
+
+#ifdef AUTO_XML
+#error AUTO_XML is already defined.
+#else
 #define AUTO_XML(filename, root) AutoXML_NS::AutoXML autoxml(filename, root, __FILE__, __LINE__);
+#endif
+
+#ifdef BIND_XML
+#error BIND_XML is already defined.
+#else
 #define BIND_XML(address, ...) \
-    if (!autoxml.BindXML(address, __FILE__, __LINE__, PP_NARG(address, ##__VA_ARGS__), ##__VA_ARGS__)) { \
+    if (!autoxml.BindXML(address, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__)) { \
         return false; \
     }
+#endif
 
-#define PP_NARG(...) \
-    PP_NARG_(__VA_ARGS__,PP_RSEQ_N())
-#define PP_NARG_(...) \
-    PP_ARG_N(__VA_ARGS__)
-#define PP_ARG_N( \
-    _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, N,...) N
-#define PP_RSEQ_N() \
+// https://stackoverflow.com/questions/2308243/macro-returning-the-number-of-arguments-it-is-given-in-c
+// no more than 64
+#ifdef ARG_NUM
+#error ARG_NUM is already defined.
+#else
+#define ARG_NUM(...) \
+    ARG_NUM_(__VA_ARGS__, ARG_SEQ_N())
+#endif
+#ifdef ARG_NUM_
+#error ARG_NUM is already defined.
+#else
+#define ARG_NUM_(...) \
+    ARG_NUM_N(__VA_ARGS__)
+#endif
+#ifdef ARG_NUM_N
+#error ARG_NUM_N is already defined.
+#else
+#define ARG_NUM_N( \
+    _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N,...) N
+#endif
+#ifdef ARG_SEQ_N
+#error ARG_SEQ_N is already defined.
+#else
+#define ARG_SEQ_N() \
     9,8,7,6,5,4,3,2,1,0
+#endif
 
 namespace AutoXML_NS
 {
+    // Type Checkers
     template<class T>
         struct is_pointer { static const bool value = false; };
 
@@ -50,9 +98,11 @@ namespace AutoXML_NS
     template<class T>
         struct is_same<T, T> { static const bool value = true; };
 
+    // AutoXML Class Define
     class AutoXML
     {
     public:
+        // Load File, Read Root Node
         AutoXML (const char* filename, const char *root, const char *cur_file, size_t cur_line):
             m_stDoc(filename), m_pRoot(NULL)
         {
@@ -65,7 +115,7 @@ namespace AutoXML_NS
             }
         }
 
-
+        // Bind variable to a path
         template<class T>
             bool BindXML(T *address, const char* cur_file, size_t cur_line, size_t cnt, ...)
             {
@@ -119,6 +169,7 @@ namespace AutoXML_NS
             }
 
     private:
+        // Get Data From XML Node
         template<class T>
             bool GetData(T *address, const char* data)
             {
