@@ -44,6 +44,12 @@ namespace AutoXML_NS
             enum {value = sizeof(Test(Usage())) == sizeof(char)};
         };
 
+    template<class To, class Src>
+        struct is_same { static const bool value = false; };
+
+    template<class T>
+        struct is_same<T, T> { static const bool value = true; };
+
     class AutoXML
     {
     public:
@@ -59,57 +65,12 @@ namespace AutoXML_NS
             }
         }
 
-        //Modifier
-        void SetFileLine(const char *cur_file, size_t cur_line)
-        {
-            m_strCurFile = cur_file;
-            m_sizeCurLine = cur_line;
-        }
-
-        template<class T>
-            bool check_type(T *address)
-            {
-                if (is_pointer<T>::value) {
-                    MERROR("address is a pointer, error.");
-                    return false;
-                } return true;
-            }
-
-        template<class T>
-            bool GetData(T *address, const char* data)
-            {
-                if (!address || !data) {
-                    AUTOXML_MERROR("pointer is NULL");
-                    return false;
-                }
-                if (is_convertible<T, std::string>::value) {
-                    AUTOXML_MDEBUG("Data type is std::string");
-                    reinterpret_cast<std::string*>(address)->assign(data);
-                }
-                else if (is_convertible<T, double>::value) {
-                    AUTOXML_MDEBUG("Data type is double");
-                    *reinterpret_cast<double*>(address) = atof(data);
-                }
-                else if (is_convertible<T, long long>::value) {
-                    AUTOXML_MDEBUG("Data type is long long");
-                    *reinterpret_cast<long*>(address) = atoll(data);
-                }
-                else if (is_convertible<T, long>::value) {
-                    AUTOXML_MDEBUG("Data type is long");
-                    *reinterpret_cast<long*>(address) = atol(data);
-                }
-                else if (is_convertible<T, int>::value) {
-                    AUTOXML_MDEBUG("Data type is int");
-                    *reinterpret_cast<int*>(address) = atoi(data);
-                }
-                return true;
-            }
 
         template<class T>
             bool BindXML(T *address, const char* cur_file, size_t cur_line, size_t cnt, ...)
             {
                 SetFileLine(cur_file, cur_line);
-                bool ret = check_type(address);
+                bool ret = CheckType(address);
                 if (!ret) {
                     return false;
                 }
@@ -155,6 +116,73 @@ namespace AutoXML_NS
                 }
                 va_end(args);
                 return true;
+            }
+
+    private:
+        template<class T>
+            bool GetData(T *address, const char* data)
+            {
+                if (!address || !data) {
+                    AUTOXML_MERROR("pointer is NULL");
+                    return false;
+                }
+                if (is_same<T, std::string>::value) {
+                    AUTOXML_MDEBUG("Data type is std::string");
+                    reinterpret_cast<std::string*>(address)->assign(data);
+                }
+                else if (is_same<T, double>::value) {
+                    AUTOXML_MDEBUG("Data type is double");
+                    *reinterpret_cast<double*>(address) = atof(data);
+                }
+                else if (is_same<T, long long>::value) {
+                    AUTOXML_MDEBUG("Data type is double");
+                    *reinterpret_cast<long long*>(address) = atoll(data);
+                }
+                else if (is_same<T, long>::value) {
+                    AUTOXML_MDEBUG("Data type is double");
+                    *reinterpret_cast<long*>(address) = atol(data);
+                }
+                else if (is_same<T, int>::value) {
+                    AUTOXML_MDEBUG("Data type is double");
+                    *reinterpret_cast<int*>(address) = atoi(data);
+                }
+                else if (is_convertible<T, std::string>::value) {
+                    AUTOXML_MDEBUG("Data type is std::string");
+                    reinterpret_cast<std::string*>(address)->assign(data);
+                }
+                else if (is_convertible<T, double>::value) {
+                    AUTOXML_MDEBUG("Data type is double");
+                    *reinterpret_cast<double*>(address) = atof(data);
+                }
+                else if (is_convertible<T, long long>::value) {
+                    AUTOXML_MDEBUG("Data type is long long");
+                    *reinterpret_cast<long*>(address) = atoll(data);
+                }
+                else if (is_convertible<T, long>::value) {
+                    AUTOXML_MDEBUG("Data type is long");
+                    *reinterpret_cast<long*>(address) = atol(data);
+                }
+                else if (is_convertible<T, int>::value) {
+                    AUTOXML_MDEBUG("Data type is int");
+                    *reinterpret_cast<int*>(address) = atoi(data);
+                }
+                return true;
+            }
+
+        //Modifier
+        void SetFileLine(const char *cur_file, size_t cur_line)
+        {
+            m_strCurFile = cur_file;
+            m_sizeCurLine = cur_line;
+        }
+
+        template<class T>
+            bool CheckType(T *address)
+            {
+                if (is_pointer<T>::value) {
+                    MERROR("address is a pointer, error.");
+                    return false;
+                } return true;
             }
 
     private:
