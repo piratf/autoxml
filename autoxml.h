@@ -4,6 +4,7 @@
 #include <limits>
 #include <typeinfo>
 #include <cerrno>
+#include <sstream>
 #include "tinyxml.h"
 
 #ifdef MERROR
@@ -97,6 +98,7 @@ namespace AutoXML_NS
     DEFINE_TYPE_NAME(unsigned long long);
     DEFINE_TYPE_NAME(float);
     DEFINE_TYPE_NAME(double);
+    DEFINE_TYPE_NAME(long double);
     DEFINE_TYPE_NAME(std::string);
     //================================================================================
 
@@ -153,24 +155,46 @@ namespace AutoXML_NS
 
     // for type limit check
     template<class To, class Match, class Cur>
-        bool CheckType(Cur data) {
+        bool CheckBounds(Cur data) {
+            std::ostringstream oss;
             if (data > std::numeric_limits<Match>::max()) {
-                MERROR("value(%ld) greater than the maximum value of MatchType(%s).", data, GetTypeName<Match>());
+                oss << "value " << data
+                    << " greater than the maximum value(" << std::numeric_limits<Match>::max() << ")"
+                    << " of MatchType(" << GetTypeName<Match>() << ").";
+                MERROR("%s", oss.str().c_str());
                 errno = ERANGE;
                 return false;
             }
             if (data > std::numeric_limits<To>::max()) {
-                MERROR("value(%ld) greater than the maximum value of Your Data Type(%s).", data, GetTypeName<To>());
+                oss << "value " << data
+                    << " greater than the maximum value(" << std::numeric_limits<To>::max() << ")"
+                    << " of Your Data Type(" << GetTypeName<To>() << ").";
+                MERROR("%s", oss.str().c_str());
+                return false;
+            }
+            // the minimal value defined for float, double, long double is a positive value
+            // http://en.cppreference.com/w/cpp/types/climits
+            Match match_min = std::numeric_limits<Match>::min();
+            if (is_same<Match, double>::value) {
+                match_min = -std::numeric_limits<Match>::max();
+            }
+            if (data < match_min) {
+                oss << "value " << data
+                    << " lower than the minimal value(" << std::numeric_limits<Match>::min() << ")"
+                    << " of MatchType(" << GetTypeName<Match>() << ").";
+                MERROR("%s", oss.str().c_str());
                 errno = ERANGE;
                 return false;
             }
-            if (data < std::numeric_limits<Match>::min()) {
-                MERROR("value(%ld) lower than the minimal value of MatchType(%s).", data, GetTypeName<Match>());
-                errno = ERANGE;
-                return false;
+            To to_min = std::numeric_limits<To>::min();
+            if (is_same<To, double>::value || is_same<To, float>::value || is_same<To, long double>::value) {
+                to_min = -std::numeric_limits<To>::max();
             }
-            if (data < std::numeric_limits<To>::min()) {
-                MERROR("value(%ld) lower than the minimal value of Your Data Type(%s).", data, GetTypeName<To>());
+            if (data < to_min) {
+                oss << "value " << static_cast<To>(data)
+                    << " lower than the minimal value(" << std::numeric_limits<To>::min() << ")"
+                    << " of Your Data Type(" << GetTypeName<To>() << ").";
+                MERROR("%s", oss.str().c_str());
                 errno = ERANGE;
                 return false;
             }
@@ -178,6 +202,7 @@ namespace AutoXML_NS
         }
 
     // for get data on different base type
+    // c++98 don't support function template partial specialization, so struct will be create
     template <int TypeID, class T>
         struct TypeData {
             bool GetData(const char *str, T *address) {
@@ -192,7 +217,7 @@ namespace AutoXML_NS
                     errno = 0;
                     return false;
                 }
-                bool ret = CheckType<T, int, long>(data);
+                bool ret = CheckBounds<T, int, long>(data);
                 if (ret) {
                     *address = data;
                 }
@@ -214,7 +239,7 @@ namespace AutoXML_NS
                     errno = 0;
                     return false;
                 }
-                bool ret = CheckType<T, int, long>(data);
+                bool ret = CheckBounds<T, int, long>(data);
                 if (ret) {
                     *address = data;
                 }
@@ -236,7 +261,7 @@ namespace AutoXML_NS
                     errno = 0;
                     return false;
                 }
-                bool ret = CheckType<T, long, long>(data);
+                bool ret = CheckBounds<T, long, long>(data);
                 if (ret) {
                     *address = data;
                 }
@@ -258,7 +283,7 @@ namespace AutoXML_NS
                     errno = 0;
                     return false;
                 }
-                bool ret = CheckType<T, long, long>(data);
+                bool ret = CheckBounds<T, long, long>(data);
                 if (ret) {
                     *address = data;
                 }
