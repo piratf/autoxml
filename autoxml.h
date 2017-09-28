@@ -1,6 +1,9 @@
 #include <cstdio>
 #include <cstdarg>
 #include <string>
+#include <limits>
+#include <typeinfo>
+#include <cerrno>
 #include "tinyxml.h"
 
 #ifdef MERROR
@@ -98,6 +101,164 @@ namespace AutoXML_NS
     template<class T>
         struct is_same<T, T> { static const bool value = true; };
 
+
+    enum {
+        INT = 1,
+        LONG,
+        DOUBLE,
+        STRING,
+        OTHER
+    };
+
+    template<class Src>
+        class best_match {
+            struct Int {char data;};
+            struct Long {char data[2];};
+            struct Double {char data[3];};
+            struct String {char data[4];};
+            struct OTHER {char data[5];};
+            static Int Test(int);
+            static Long Test(long);
+            static Double Test(double);
+            static String Test(std::string);
+            static OTHER Test(...);
+            static Src Usage();
+        public:
+            enum {value = sizeof(Test(Usage())) };
+        };
+
+    template<class To, class Match, class Cur>
+        bool CheckType(Cur data) {
+            if (data > std::numeric_limits<Match>::max()) {
+                MERROR("value(%ld) greater than the maximum value of MatchType(%s).", data, typeid(Match).name());
+                errno = ERANGE;
+                return false;
+            }
+            if (data > std::numeric_limits<To>::max()) {
+                MERROR("value(%ld) greater than the maximum value of Your Data Type(%s).", data, typeid(To).name());
+                errno = ERANGE;
+                return false;
+            }
+            if (data < std::numeric_limits<Match>::min()) {
+                MERROR("value(%ld) lower than the minimal value of MatchType(%s).", data, typeid(To).name());
+                errno = ERANGE;
+                return false;
+            }
+            if (data < std::numeric_limits<To>::min()) {
+                MERROR("value(%ld) lower than the minimal value of Your Data Type(%s).", data, typeid(To).name());
+                errno = ERANGE;
+                return false;
+            }
+            return true;
+        }
+
+    template <int TypeID, class T>
+        struct TypeData {
+            bool GetData(const char *str, T *address) {
+                if (!address) {
+                    return false;
+                }
+                char *end = NULL;
+                errno = 0;
+                long data = strtol(str, &end, 10);
+                if (errno == ERANGE){
+                    MERROR("range error, got %ld", data);
+                    errno = 0;
+                    return false;
+                }
+                bool ret = CheckType<T, int, long>(data);
+                if (ret) {
+                    *address = data;
+                }
+                return ret;
+            }
+        };
+
+    template <class T>
+        struct TypeData<INT, T> {
+            bool GetData(const char *str, T *address) {
+                if (!address) {
+                    return false;
+                }
+                char *end = NULL;
+                errno = 0;
+                long data = strtol(str, &end, 10);
+                if (errno == ERANGE){
+                    MERROR("range error, got %ld", data);
+                    errno = 0;
+                    return false;
+                }
+                bool ret = CheckType<T, int, long>(data);
+                if (ret) {
+                    *address = data;
+                }
+                return ret;
+            }
+        };
+
+    template <class T>
+        struct TypeData<LONG, T> {
+            bool GetData(const char *str, T *address) {
+                if (!address) {
+                    return false;
+                }
+                char *end = NULL;
+                errno = 0;
+                long data = strtol(str, &end, 10);
+                if (errno == ERANGE){
+                    MERROR("range error, got %ld", data);
+                    errno = 0;
+                    return false;
+                }
+                bool ret = CheckType<T, long, long>(data);
+                if (ret) {
+                    *address = data;
+                }
+                return ret;
+            }
+        };
+
+    template <class T>
+        struct TypeData<DOUBLE, T> {
+            bool GetData(const char *str, T *address) {
+                if (!address) {
+                    return false;
+                }
+                char *end = NULL;
+                errno = 0;
+                double data = strtod(str, &end);
+                if (errno == ERANGE){
+                    MERROR("range error, got %ld", data);
+                    errno = 0;
+                    return false;
+                }
+                bool ret = CheckType<T, long, long>(data);
+                if (ret) {
+                    *address = data;
+                }
+                return ret;
+            }
+        };
+
+    template <class T>
+        struct TypeData<STRING, T> {
+            bool GetData(const char *str, T *address) {
+                if (!address) {
+                    return false;
+                }
+                if (is_same<std::string, T>::value) {
+                    address->assign(str);
+                    return true;
+                }
+                MERROR("Only Support std::string for String Type. Current Type(%s)", typeid(T).name());
+                return false;
+            }
+        };
+
+    const static std::string types[6] = {
+        "Zero", "Int", "Long", "Double", "String", "Other"
+    };
+
     // AutoXML Class Define
     class AutoXML
     {
@@ -120,7 +281,7 @@ namespace AutoXML_NS
             bool BindXML(T *address, const char* cur_file, size_t cur_line, size_t cnt, ...)
             {
                 SetFileLine(cur_file, cur_line);
-                bool ret = CheckType(address);
+                bool ret = PointerCheck(*address);
                 if (!ret) {
                     return false;
                 }
@@ -177,47 +338,10 @@ namespace AutoXML_NS
                     AUTOXML_MERROR("pointer is NULL");
                     return false;
                 }
-                if (is_same<T, std::string>::value) {
-                    AUTOXML_MDEBUG("Data type is std::string");
-                    reinterpret_cast<std::string*>(address)->assign(data);
-                }
-                else if (is_same<T, double>::value) {
-                    AUTOXML_MDEBUG("Data type is double");
-                    *reinterpret_cast<double*>(address) = atof(data);
-                }
-                else if (is_same<T, long long>::value) {
-                    AUTOXML_MDEBUG("Data type is double");
-                    *reinterpret_cast<long long*>(address) = atoll(data);
-                }
-                else if (is_same<T, long>::value) {
-                    AUTOXML_MDEBUG("Data type is double");
-                    *reinterpret_cast<long*>(address) = atol(data);
-                }
-                else if (is_same<T, int>::value) {
-                    AUTOXML_MDEBUG("Data type is double");
-                    *reinterpret_cast<int*>(address) = atoi(data);
-                }
-                else if (is_convertible<T, std::string>::value) {
-                    AUTOXML_MDEBUG("Data type is std::string");
-                    reinterpret_cast<std::string*>(address)->assign(data);
-                }
-                else if (is_convertible<T, double>::value) {
-                    AUTOXML_MDEBUG("Data type is double");
-                    *reinterpret_cast<double*>(address) = atof(data);
-                }
-                else if (is_convertible<T, long long>::value) {
-                    AUTOXML_MDEBUG("Data type is long long");
-                    *reinterpret_cast<long*>(address) = atoll(data);
-                }
-                else if (is_convertible<T, long>::value) {
-                    AUTOXML_MDEBUG("Data type is long");
-                    *reinterpret_cast<long*>(address) = atol(data);
-                }
-                else if (is_convertible<T, int>::value) {
-                    AUTOXML_MDEBUG("Data type is int");
-                    *reinterpret_cast<int*>(address) = atoi(data);
-                }
-                return true;
+                const int type_id = best_match<T>::value;
+                AUTOXML_MDEBUG("Best Match ID Is:(%d: %s)", type_id, types[type_id].c_str());
+                TypeData<type_id, T> typedata;
+                return typedata.GetData(data, address);
             }
 
         //Modifier
@@ -228,7 +352,7 @@ namespace AutoXML_NS
         }
 
         template<class T>
-            bool CheckType(T *address)
+            bool PointerCheck(T)
             {
                 if (is_pointer<T>::value) {
                     MERROR("address is a pointer, error.");
