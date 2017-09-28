@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document>
     <TheName>AutoXML</TheName>
-    <Version Value="0.1" Author="piratf" />
-    <Test Int="1" Double="0.03233" Short="-1" UnsignedShort="-1"/>
+    <Version Value="0.2" Author="piratf" />
+    <Test Int="1" Double="0.03233" Short="-1" UnsignedShort="233"/>
 </document>

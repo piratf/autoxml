@@ -78,6 +78,28 @@
 
 namespace AutoXML_NS
 {
+    // https://stackoverflow.com/questions/1055452/c-get-name-of-type-in-template
+    template<typename T> const char *GetTypeName() { return typeid(T).name(); }
+
+#define DEFINE_TYPE_NAME(type) \
+    template<>const char *GetTypeName<type>(){return #type;}
+
+    DEFINE_TYPE_NAME(bool);
+    DEFINE_TYPE_NAME(char);
+    DEFINE_TYPE_NAME(unsigned char);
+    DEFINE_TYPE_NAME(short);
+    DEFINE_TYPE_NAME(unsigned short);
+    DEFINE_TYPE_NAME(int);
+    DEFINE_TYPE_NAME(unsigned int);
+    DEFINE_TYPE_NAME(long);
+    DEFINE_TYPE_NAME(unsigned long);
+    DEFINE_TYPE_NAME(long long);
+    DEFINE_TYPE_NAME(unsigned long long);
+    DEFINE_TYPE_NAME(float);
+    DEFINE_TYPE_NAME(double);
+    DEFINE_TYPE_NAME(std::string);
+    //================================================================================
+
     // Type Checkers
     template<class T>
         struct is_pointer { static const bool value = false; };
@@ -102,6 +124,7 @@ namespace AutoXML_NS
         struct is_same<T, T> { static const bool value = true; };
 
 
+    // for type id
     enum {
         INT = 1,
         LONG,
@@ -110,6 +133,7 @@ namespace AutoXML_NS
         OTHER
     };
 
+    // for src type match base type
     template<class Src>
         class best_match {
             struct Int {char data;};
@@ -127,31 +151,33 @@ namespace AutoXML_NS
             enum {value = sizeof(Test(Usage())) };
         };
 
+    // for type limit check
     template<class To, class Match, class Cur>
         bool CheckType(Cur data) {
             if (data > std::numeric_limits<Match>::max()) {
-                MERROR("value(%ld) greater than the maximum value of MatchType(%s).", data, typeid(Match).name());
+                MERROR("value(%ld) greater than the maximum value of MatchType(%s).", data, GetTypeName<Match>());
                 errno = ERANGE;
                 return false;
             }
             if (data > std::numeric_limits<To>::max()) {
-                MERROR("value(%ld) greater than the maximum value of Your Data Type(%s).", data, typeid(To).name());
+                MERROR("value(%ld) greater than the maximum value of Your Data Type(%s).", data, GetTypeName<To>());
                 errno = ERANGE;
                 return false;
             }
             if (data < std::numeric_limits<Match>::min()) {
-                MERROR("value(%ld) lower than the minimal value of MatchType(%s).", data, typeid(To).name());
+                MERROR("value(%ld) lower than the minimal value of MatchType(%s).", data, GetTypeName<Match>());
                 errno = ERANGE;
                 return false;
             }
             if (data < std::numeric_limits<To>::min()) {
-                MERROR("value(%ld) lower than the minimal value of Your Data Type(%s).", data, typeid(To).name());
+                MERROR("value(%ld) lower than the minimal value of Your Data Type(%s).", data, GetTypeName<To>());
                 errno = ERANGE;
                 return false;
             }
             return true;
         }
 
+    // for get data on different base type
     template <int TypeID, class T>
         struct TypeData {
             bool GetData(const char *str, T *address) {
@@ -250,7 +276,7 @@ namespace AutoXML_NS
                     address->assign(str);
                     return true;
                 }
-                MERROR("Only Support std::string for String Type. Current Type(%s)", typeid(T).name());
+                MERROR("Only Support std::string for String Type. Current Type(%s)", GetTypeName<T>());
                 return false;
             }
         };
