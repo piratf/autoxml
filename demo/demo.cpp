@@ -4,6 +4,7 @@
 using namespace AutoXML_NS;
 
 struct STAutoXMLDesc {
+    static const int MAX_STR_LEN = 100;
     std::string m_strName;
     std::string m_strVersion;
     std::string m_strAuthor;
@@ -11,6 +12,13 @@ struct STAutoXMLDesc {
     short m_sTest;
     unsigned short m_usTest;
     double m_dTest;
+    char m_cstr[MAX_STR_LEN];
+    char *m_pcstr;
+
+    STAutoXMLDesc()
+        : m_pcstr(NULL) {
+
+        }
 };
 
 void Display(const STAutoXMLDesc &desc)
@@ -22,6 +30,8 @@ void Display(const STAutoXMLDesc &desc)
     printf("Test short: %d\n", desc.m_sTest);
     printf("Test unsigned short: %u\n", desc.m_usTest);
     printf("Test double: %lf\n", desc.m_dTest);
+    printf("Test char array: %s\n", desc.m_cstr);
+    printf("Test char pointer: %s\n", desc.m_pcstr);
 }
 
 bool LoadCfg() {
@@ -34,6 +44,9 @@ bool LoadCfg() {
     BIND_XML(&desc.m_sTest, "Test", "Short");
     BIND_XML(&desc.m_usTest, "Test", "UnsignedShort");
     BIND_XML(&desc.m_dTest, "Test", "Double");
+    BIND_XML(&desc.m_cstr, "Test", "CStr");
+    //raw pointer is not supported, try this line the error will be handled.
+    //BIND_XML(&desc.m_pcstr, "Test", "CStr");
     Display(desc);
     return true;
 }

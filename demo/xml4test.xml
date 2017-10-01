@@ -2,5 +2,5 @@
 <document>
     <TheName>AutoXML</TheName>
     <Version Value="0.2" Author="piratf" />
-    <Test Int="1" Double="0.03233" Short="-1" UnsignedShort="233"/>
+    <Test Int="1" Double="0.03233" Short="-1" UnsignedShort="233" CStr="Test CStr."/>
 </document>
