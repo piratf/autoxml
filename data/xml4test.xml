@@ -3,4 +3,12 @@
     <TheName>AutoXML</TheName>
     <Version Value="0.2" Author="piratf" />
     <Test Int="1" Double="0.03233" Short="-1" UnsignedShort="233" CStr="Test CStr." NegativeDouble="-0.6666666"/>
+    <TestElem>
+        <Value>1</Value>
+        <Value>2</Value>
+        <Value>3</Value>
+        <Value>4</Value>
+        <Value>5</Value>
+        <Value>6</Value>
+    </TestElem>
 </document>

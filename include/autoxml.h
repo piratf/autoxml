@@ -82,19 +82,28 @@
     autoxml.BindXML(address, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
+//todo: Remove Address
 #ifdef GET_ELEM
 #error XML_ELEM is already defined
 #else
 #define GET_ELEM(address, ...) \
-    autoxml.BuildPath(ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__); \
-    autoxml.GetElemOfPath();
+    autoxml.GetElemOfPath(__FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
 #endif
+
+//todo: GET_ELEM_FROM_ELEM(pElem, path)
 
 #ifdef BIND_ELEM
 #error BIND_ELEM is already defined.
 #else
-#define BIND_ELEM(address, pElem, ...) \
-    autoxml.BindElem(address, pElem, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
+#define BIND_ELEM(address, pElem, strAttr) \
+    autoxml.GetDataFromElem(address, pElem, strAttr);
+#endif
+
+#ifdef BIND_ELEM_PATH
+#error BIND_ELEM_PATH is already defined.
+#else
+#define BIND_ELEM_PATH(address, pElem, ...) \
+    autoxml.GetDataFromElemAndPath(address, pElem, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
 namespace AutoXML_NS
@@ -321,8 +330,11 @@ template<class Type>
 bool IsCharArray(Type *address)
 {
     bool ret = is_same<char *, typename STIsCharArray<Type>::EleType>::value;
-    MDEBUG("Type of address(%p) is %s : The extracted type is %s, ret = %d", (void *) address, GetTypeName<Type>(),
-           GetTypeName<typename STIsCharArray<Type>::EleType>(), ret);
+    MDEBUG("Type of address(%p) is %s : The extracted type is %s, ret = %d"
+           , (void *) address
+           , GetTypeName<Type>()
+           , GetTypeName<typename STIsCharArray<Type>::EleType>()
+           , ret);
     // 如果 C 数组经过萃取，两个类型会不一样
     // 而 raw pointer 在萃取之后两个类型相同
     // raw pointer 比较危险，不建议使用
@@ -343,8 +355,10 @@ template<class Type>
 bool GetCharArrayLen(Type *)
 {
     bool ret = is_same<char *, typename STIsCharArray<Type>::EleType>::value;
-    MDEBUG("Type of address is %s : The extracted type is %s, ret = %d", GetTypeName<Type>(),
-           GetTypeName<typename STIsCharArray<Type>::EleType>(), ret);
+    MDEBUG("Type of address is %s : The extracted type is %s, ret = %d"
+           , GetTypeName<Type>()
+           , GetTypeName<typename STIsCharArray<Type>::EleType>()
+           , ret);
     return ret;
 }
 
@@ -491,38 +505,81 @@ class AutoXML
         if (m_stDoc.LoadFile()) {
             m_pRoot = m_stDoc.FirstChildElement(root);
         } else {
-            AUTOXML_MERROR("Load File(%s) Error. ID:(%d), Desc(%s)", filename, m_stDoc.ErrorId(),
-                           m_stDoc.ErrorDesc());
+            AUTOXML_MERROR("Load File(%s) Error. ID:(%d), Desc(%s)", filename, m_stDoc.ErrorId(), m_stDoc.ErrorDesc());
         }
     }
 
     template<class T>
-    bool GetDataFromElem(T *address, TiXmlElement *pElem, const char *strName)
+    bool GetDataFromElem(T *address, TiXmlElement *pElem, const char *strName = NULL)
     {
-        AUTOXML_MDEBUG("Attr Name: %s", strName);
+        if (!pElem) {
+            AUTOXML_MERROR("pElem Is NULL.");
+            return false;
+        }
+        if (!strName) {
+            return GetData(address, pElem->GetText());
+        }
+        else
+        {
+            return GetData(address, pElem->Attribute(strName));
+        }
+    }
+
+    template<class T>
+    bool GetDataFromParentElem(T *address, TiXmlElement *pElem, const char *strName)
+    {
+        if (!pElem) {
+            AUTOXML_MERROR("pElem Is NULL.");
+            return false;
+        }
+        AUTOXML_MDEBUG("Target Name: %s", strName);
         const char *data = pElem->Attribute(strName);
         if (!data) {
             pElem = pElem->FirstChildElement(strName);
             data = pElem->GetText();
             if (!data) {
-                AUTOXML_MERROR("Can't Find Attribute(%s)", strName);
+                AUTOXML_MERROR("Can't Find Target Name(%s)", strName);
                 return false;
             } else {
-                MDEBUG("Get Data is %s", data);
+                MDEBUG("Get Node Data is %s", data);
                 return GetData(address, data);
             }
         } else {
-            MDEBUG("Get Data is %s", data);
+            MDEBUG("Get Attribute Data is %s", data);
             return GetData(address, data);
         }
+    }
+
+    template<class T>
+    bool GetDataFromElemAndPath(T *address
+                                , TiXmlElement *pElem
+                                , const char *cur_file
+                                , size_t cur_line
+                                , size_t cnt
+                                , ...)
+    {
+        va_list args;
+        va_start(args, cnt);
+        BuildRelativePath(cnt, args);
+        va_end(args);
+        SetFileLine(cur_file, cur_line);
+        TypeCheckRet ret = TypeCheck(address);
+        if (ret == TCR_POINTER) {
+            return false;
+        }
+        if (!m_pRoot) {
+            MERROR("Load Root Element Failed.");
+            return false;
+        }
+        TiXmlElement *pRElem = GetParentElemOfRelativePath(pElem);
+        return GetDataFromParentElem(address, pRElem, m_vecRelativePath[m_vecRelativePath.size() - 1].c_str());
     }
 
     void BuildPath(size_t cnt, va_list args)
     {
         m_vecPath.clear();
         for (size_t i = 0; i < cnt; ++i) {
-            const char *name = va_arg(args,
-                                      const char*);
+            const char *name = va_arg(args, const char*);
             m_vecPath.push_back(name);
         }
         for (size_t i = 0; i < m_vecPath.size(); ++i) {
@@ -530,8 +587,19 @@ class AutoXML
         }
     }
 
-    TiXmlElement *GetParentElemOfPath()
+    void BuildRelativePath(size_t cnt, va_list args)
+    {
+        m_vecRelativePath.clear();
+        for (size_t i = 0; i < cnt; ++i) {
+            const char *name = va_arg(args, const char*);
+            m_vecRelativePath.push_back(name);
+        }
+        for (size_t i = 0; i < m_vecRelativePath.size(); ++i) {
+            MDEBUG("%s", m_vecRelativePath[i].c_str());
+        }
+    }
 
+    TiXmlElement *GetParentElemOfPath()
     {
         if (!m_pRoot) {
             MERROR("Load Root Element Failed.");
@@ -557,8 +625,33 @@ class AutoXML
         return pElem;
     }
 
-    TiXmlElement *GetElemOfPath()
+    TiXmlElement *GetParentElemOfRelativePath(TiXmlElement *pElem)
     {
+        if (!m_pRoot) {
+            MERROR("Load Root Element Failed.");
+            return NULL;
+        }
+
+        TiXmlElement *pRElem = pElem;
+        for (size_t i = 0; i < m_vecRelativePath.size() - 1; ++i) {
+            const char *name = m_vecRelativePath[i].c_str();
+            AUTOXML_MDEBUG("Current Name: %s", name);
+            pRElem = pRElem->FirstChildElement(name);
+            if (!pRElem) {
+                AUTOXML_MERROR("Can't Find Child Element(%s)", name);
+                return NULL;
+            }
+        }
+        return pRElem;
+    }
+
+    TiXmlElement *GetElemOfPath(const char *cur_file, size_t cur_line, size_t cnt, ...)
+    {
+        va_list args;
+        va_start(args, cnt);
+        BuildPath(cnt, args);
+        va_end(args);
+        SetFileLine(cur_file, cur_line);
         if (!m_pRoot) {
             MERROR("Load Root Element Failed.");
             return NULL;
@@ -568,20 +661,16 @@ class AutoXML
         for (size_t i = 0; i < m_vecPath.size(); ++i) {
             const char *name = m_vecPath[i].c_str();
             AUTOXML_MDEBUG("Current Name: %s", name);
-            // 如果是最后一个节点，就考虑找 Attr 或者 GetText
-            if (i + 1 == m_vecPath.size()) {
-                return pElem;
-            } else {
-                // 否则就向下寻找 Element 节点
-                pElem = pElem->FirstChildElement(name);
-                if (!pElem) {
-                    AUTOXML_MERROR("Can't Find Child Element(%s)", name);
-                    return NULL;
-                }
+            pElem = pElem->FirstChildElement(name);
+            if (!pElem) {
+                AUTOXML_MERROR("Can't Find Child Element(%s)", name);
+                return NULL;
             }
         }
         return pElem;
     }
+
+
 
     // Bind variable to a path
     template<class T>
@@ -602,12 +691,7 @@ class AutoXML
         }
 
         TiXmlElement *pElem = GetParentElemOfPath();
-        return GetDataFromElem(address, pElem, m_vecPath[m_vecPath.size() - 1].c_str());
-    }
-
-    TiXmlElement *GetElem(const char *cur_file, size_t cur_line, size_t cnt, va_list args)
-    {
-        return NULL;
+        return GetDataFromParentElem(address, pElem, m_vecPath[m_vecPath.size() - 1].c_str());
     }
 
  private:
@@ -673,6 +757,7 @@ class AutoXML
     TiXmlDocument m_stDoc;
     TiXmlElement *m_pRoot;
     std::vector<std::string> m_vecPath;
+    std::vector<std::string> m_vecRelativePath;
 
     const char *m_strCurFile;
     size_t m_sizeCurLine;

@@ -7,9 +7,18 @@
 
 TEST(autoxml__Test, read_Element)
 {
-    int eq = 1;
-//    AUTO_XML("xml4test.xml", "document");
-//    TiXmlElement *pElem = XML_ELEM(&i, "Test")
-//    BIND_ELEM(&i, pElem, "Int")
-    EXPECT_EQ(eq, eq);
+    int aiValue[6] = {};
+    int eq_aiValue[6] = {1, 2, 3, 4, 5, 6};
+    AUTO_XML("xml4test.xml", "document");
+    TiXmlElement *pElem = GET_ELEM(&iValue, "TestElem")
+    TiXmlElement *cElem = pElem->FirstChildElement();
+    for (size_t i = 0; i < 6; ++i) {
+        autoxml.GetDataFromElem(&aiValue[i], cElem);
+        cElem = cElem->NextSiblingElement();
+    }
+
+
+    for (size_t i = 0; i < 6; ++i) {
+        EXPECT_EQ(aiValue[i], eq_aiValue[i]);
+    }
 }
