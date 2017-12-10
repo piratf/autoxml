@@ -2,8 +2,8 @@
 // Created by piratf on 2017/12/10.
 //
 
-#include "gtest/gtest.h"
 #include "autoxml.h"
+#include "gtest/gtest.h"
 
 TEST(autoxml__Test, read_int)
 {
