@@ -65,7 +65,7 @@
 #error ARG_SEQ_N is already defined.
 #else
 #define ARG_SEQ_N() \
-    9,8,7,6,5,4,3,2,1,0
+    10,9,8,7,6,5,4,3,2,1,0
 #endif
 //endregion
 
@@ -79,18 +79,23 @@
 #error BIND_XML is already defined.
 #else
 #define BIND_XML(address, ...) \
-    autoxml.BindXML(address, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
+    autoxml.BindXML(address, __FILE__, __LINE__, ARG_NUM(__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
-//todo: Remove Address
 #ifdef GET_ELEM
-#error XML_ELEM is already defined
+#error GET_ELEM is already defined
 #else
-#define GET_ELEM(address, ...) \
-    autoxml.GetElemOfPath(__FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
+#define GET_ELEM(...) \
+    autoxml.GetElemOfPath(__FILE__, __LINE__, ARG_NUM(__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
 //todo: GET_ELEM_FROM_ELEM(pElem, path)
+#ifdef GET_ELEM_FROM_ELEM
+#error GET_ELEM_FROM_ELEM is already defined
+#else
+#define GET_ELEM_FROM_ELEM(pElem, ...) \
+    autoxml.GetElemOfPathFromElem(pElem, __FILE__, __LINE__, ARG_NUM(__VA_ARGS__), ##__VA_ARGS__);
+#endif
 
 #ifdef BIND_ELEM
 #error BIND_ELEM is already defined.
@@ -103,7 +108,7 @@
 #error BIND_ELEM_PATH is already defined.
 #else
 #define BIND_ELEM_PATH(address, pElem, ...) \
-    autoxml.GetDataFromElemAndPath(address, pElem, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
+    autoxml.GetDataFromElemAndPath(address, pElem, __FILE__, __LINE__, ARG_NUM(__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
 namespace AutoXML_NS
@@ -670,7 +675,30 @@ class AutoXML
         return pElem;
     }
 
+    TiXmlElement *GetElemOfPathFromElem(TiXmlElement *_pElem, const char *cur_file, size_t cur_line, size_t cnt, ...)
+    {
+        va_list args;
+        va_start(args, cnt);
+        BuildPath(cnt, args);
+        va_end(args);
+        SetFileLine(cur_file, cur_line);
+        if (!m_pRoot) {
+            MERROR("Load Root Element Failed.");
+            return NULL;
+        }
 
+        TiXmlElement *pElem = _pElem;
+        for (size_t i = 0; i < m_vecPath.size(); ++i) {
+            const char *name = m_vecPath[i].c_str();
+            AUTOXML_MDEBUG("Current Name: %s", name);
+            pElem = pElem->FirstChildElement(name);
+            if (!pElem) {
+                AUTOXML_MERROR("Can't Find Child Element(%s)", name);
+                return NULL;
+            }
+        }
+        return pElem;
+    }
 
     // Bind variable to a path
     template<class T>
