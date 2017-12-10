@@ -5,8 +5,10 @@
 #include <typeinfo>
 #include <cerrno>
 #include <sstream>
+#include <vector>
 #include "tinyxml.h"
 
+//region LogDefines
 // This group of macros is used for log.
 // Use your log tool instead here.
 #ifdef MERROR
@@ -36,23 +38,11 @@
 #else
 #define AUTOXML_MDEBUG(format, ...) MDEBUG(format "->[%s]:line %d", ##__VA_ARGS__, m_strCurFile, m_sizeCurLine)
 #endif
+//endregion
 
-#ifdef AUTO_XML
-#error AUTO_XML is already defined.
-#else
-#define AUTO_XML(filename, root) AutoXML_NS::AutoXML autoxml(filename, root, __FILE__, __LINE__);
-#endif
-
-#ifdef BIND_XML
-#error BIND_XML is already defined.
-#else
-#define BIND_XML(address, ...) \
-    autoxml.BindXML(address, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
-#endif
-
+//region ArgsNumDefines
 // This group of macons is used to get the length of the parameter
 // https://stackoverflow.com/questions/2308243/macro-returning-the-number-of-arguments-it-is-given-in-c
-// no more than 64
 #ifdef ARG_NUM
 #error ARG_NUM is already defined.
 #else
@@ -76,6 +66,35 @@
 #else
 #define ARG_SEQ_N() \
     9,8,7,6,5,4,3,2,1,0
+#endif
+//endregion
+
+#ifdef AUTO_XML
+#error AUTO_XML is already defined.
+#else
+#define AUTO_XML(filename, root) AutoXML_NS::AutoXML autoxml(filename, root, __FILE__, __LINE__);
+#endif
+
+#ifdef BIND_XML
+#error BIND_XML is already defined.
+#else
+#define BIND_XML(address, ...) \
+    autoxml.BindXML(address, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
+#endif
+
+#ifdef GET_ELEM
+#error XML_ELEM is already defined
+#else
+#define GET_ELEM(address, ...) \
+    autoxml.BuildPath(ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__); \
+    autoxml.GetElemOfPath();
+#endif
+
+#ifdef BIND_ELEM
+#error BIND_ELEM is already defined.
+#else
+#define BIND_ELEM(address, pElem, ...) \
+    autoxml.BindElem(address, pElem, __FILE__, __LINE__, ARG_NUM(address, ##__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
 namespace AutoXML_NS
@@ -329,6 +348,7 @@ bool GetCharArrayLen(Type *)
     return ret;
 }
 
+//region TypeDataMagic
 // for get data on different base type
 // c++98 don't support function template partial specialization, so struct will be create
 template<int TypeID, class T>
@@ -445,11 +465,12 @@ struct TypeData<CSTRING, T>
         MDEBUG("Char Array Len Is %lu", len);
         memset(static_cast<void *>(address), 0, len * sizeof(char));
         memcpy(address, str, (len * sizeof(char)) - 1);
-        MDEBUG("Char Array Content Is: %s", (const char *)address);
-        MDEBUG("Char Array Address(%p)", (void *)address);
+        MDEBUG("Char Array Content Is: %s", (const char *) address);
+        MDEBUG("Char Array Address(%p)", (void *) address);
         return true;
     }
 };
+//endregion
 
 // AutoXML Class Define
 class AutoXML
@@ -475,10 +496,101 @@ class AutoXML
         }
     }
 
+    template<class T>
+    bool GetDataFromElem(T *address, TiXmlElement *pElem, const char *strName)
+    {
+        AUTOXML_MDEBUG("Attr Name: %s", strName);
+        const char *data = pElem->Attribute(strName);
+        if (!data) {
+            pElem = pElem->FirstChildElement(strName);
+            data = pElem->GetText();
+            if (!data) {
+                AUTOXML_MERROR("Can't Find Attribute(%s)", strName);
+                return false;
+            } else {
+                MDEBUG("Get Data is %s", data);
+                return GetData(address, data);
+            }
+        } else {
+            MDEBUG("Get Data is %s", data);
+            return GetData(address, data);
+        }
+    }
+
+    void BuildPath(size_t cnt, va_list args)
+    {
+        m_vecPath.clear();
+        for (size_t i = 0; i < cnt; ++i) {
+            const char *name = va_arg(args,
+                                      const char*);
+            m_vecPath.push_back(name);
+        }
+        for (size_t i = 0; i < m_vecPath.size(); ++i) {
+            MDEBUG("%s", m_vecPath[i].c_str());
+        }
+    }
+
+    TiXmlElement *GetParentElemOfPath()
+
+    {
+        if (!m_pRoot) {
+            MERROR("Load Root Element Failed.");
+            return NULL;
+        }
+
+        TiXmlElement *pElem = m_pRoot;
+        for (size_t i = 0; i < m_vecPath.size() - 1; ++i) {
+            const char *name = m_vecPath[i].c_str();
+            AUTOXML_MDEBUG("Current Name: %s", name);
+            // 如果是最后一个节点，就考虑找 Attr 或者 GetText
+            if (i + 1 == m_vecPath.size()) {
+                return pElem;
+            } else {
+                // 否则就向下寻找 Element 节点
+                pElem = pElem->FirstChildElement(name);
+                if (!pElem) {
+                    AUTOXML_MERROR("Can't Find Child Element(%s)", name);
+                    return NULL;
+                }
+            }
+        }
+        return pElem;
+    }
+
+    TiXmlElement *GetElemOfPath()
+    {
+        if (!m_pRoot) {
+            MERROR("Load Root Element Failed.");
+            return NULL;
+        }
+
+        TiXmlElement *pElem = m_pRoot;
+        for (size_t i = 0; i < m_vecPath.size(); ++i) {
+            const char *name = m_vecPath[i].c_str();
+            AUTOXML_MDEBUG("Current Name: %s", name);
+            // 如果是最后一个节点，就考虑找 Attr 或者 GetText
+            if (i + 1 == m_vecPath.size()) {
+                return pElem;
+            } else {
+                // 否则就向下寻找 Element 节点
+                pElem = pElem->FirstChildElement(name);
+                if (!pElem) {
+                    AUTOXML_MERROR("Can't Find Child Element(%s)", name);
+                    return NULL;
+                }
+            }
+        }
+        return pElem;
+    }
+
     // Bind variable to a path
     template<class T>
     bool BindXML(T *address, const char *cur_file, size_t cur_line, size_t cnt, ...)
     {
+        va_list args;
+        va_start(args, cnt);
+        BuildPath(cnt, args);
+        va_end(args);
         SetFileLine(cur_file, cur_line);
         TypeCheckRet ret = TypeCheck(address);
         if (ret == TCR_POINTER) {
@@ -489,44 +601,13 @@ class AutoXML
             return false;
         }
 
-        MDEBUG("Num Of Args: %d", cnt);
+        TiXmlElement *pElem = GetParentElemOfPath();
+        return GetDataFromElem(address, pElem, m_vecPath[m_vecPath.size() - 1].c_str());
+    }
 
-        va_list args;
-        va_start(args, cnt);
-        TiXmlElement *pElem = m_pRoot;
-        for (size_t i = 0; i < cnt; ++i) {
-            const char *name = va_arg(args,
-                                      const char*);
-            AUTOXML_MDEBUG("Current Name: %s", name);
-            // 如果是最后一个节点，就考虑找 Attr 或者 GetText
-            if (i + 1 == cnt) {
-                AUTOXML_MDEBUG("Attr Name: %s", name);
-                const char *data = pElem->Attribute(name);
-                if (!data) {
-                    pElem = pElem->FirstChildElement(name);
-                    data = pElem->GetText();
-                    if (!data) {
-                        AUTOXML_MERROR("Can't Find Attribute(%s)", name);
-                        return false;
-                    } else {
-                        MDEBUG("Get Data is %s", data);
-                        return GetData(address, data);
-                    }
-                } else {
-                    MDEBUG("Get Data is %s", data);
-                    return GetData(address, data);
-                }
-            } else {
-                // 否则就向下寻找 Element 节点
-                pElem = pElem->FirstChildElement(name);
-                if (!pElem) {
-                    AUTOXML_MERROR("Can't Find Child Element(%s)", name);
-                    return false;
-                }
-            }
-        }
-        va_end(args);
-        return true;
+    TiXmlElement *GetElem(const char *cur_file, size_t cur_line, size_t cnt, va_list args)
+    {
+        return NULL;
     }
 
  private:
@@ -591,6 +672,7 @@ class AutoXML
  private:
     TiXmlDocument m_stDoc;
     TiXmlElement *m_pRoot;
+    std::vector<std::string> m_vecPath;
 
     const char *m_strCurFile;
     size_t m_sizeCurLine;

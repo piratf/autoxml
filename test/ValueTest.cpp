@@ -21,6 +21,14 @@ TEST(autoxml__Test, read_double)
     EXPECT_EQ(i, eq);
 }
 
+TEST(autoxml__Test, read_double_negative)
+{
+    double i = 0, eq = -0.6666666;
+    AUTO_XML("xml4test.xml", "document");
+    BIND_XML(&i,  "Test", "NegativeDouble");
+    EXPECT_EQ(i, eq);
+}
+
 TEST(autoxml__Test, read_short)
 {
     short i = 0, eq = -1;
@@ -44,9 +52,4 @@ TEST(autoxml__Test, read_cstr)
     AUTO_XML("xml4test.xml", "document");
     BIND_XML(&str,  "Test", "CStr");
     EXPECT_STREQ(str, eq);
-}
-
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
