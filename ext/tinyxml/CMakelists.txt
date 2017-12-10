@@ -10,10 +10,3 @@ set(sources
         )
 
 add_library(tinyxml ${sources})
-
-install(FILES tinyxml.h tinystr.h DESTINATION include)
-install(TARGETS tinyxml
-        RUNTIME DESTINATION lib
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        )

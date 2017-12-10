@@ -42,7 +42,7 @@ set(PROJECT_TEST_NAME ${PROJECT_NAME_STR}_test)
 configure_file(data/xml4test.xml xml4test.xml COPYONLY)
 include_directories(${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES} ${TINYXML_INCLUDES})
 
-file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cpp ${TINYXML_INCLUDES}/*.cpp ${PROJECT_SOURCE_DIR}/include/*.h)
+file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cpp ${PROJECT_SOURCE_DIR}/include/*.h)
 add_executable(${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
 add_dependencies(${PROJECT_TEST_NAME} googletest)
 
@@ -62,6 +62,6 @@ else ()
             )
 endif ()
 
-target_link_libraries(${PROJECT_TEST_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_TEST_NAME} ${CMAKE_THREAD_LIBS_INIT} tinyxml)
 
 add_test(test1 ${PROJECT_TEST_NAME})

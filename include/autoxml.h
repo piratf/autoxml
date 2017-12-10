@@ -19,9 +19,9 @@
 #error MDEBUG is already defined.
 #else
 #ifdef DEBUG
-#define MDEBUG(format, ...) fprintf (stdout, "[%s][%s](line %lu): " format "\n", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
+#define MDEBUG(format, ...) fprintf (stdout, "[%s][%s](line %d): " format "\n", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
 #else
-#define MDEBUG(format, ...) void(0)
+#define MDEBUG(format, ...) fprintf (stdout, "[%s][%s](line %d): " format "\n", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
 #endif
 #endif
 
@@ -86,7 +86,7 @@ template<typename T>
 const char *GetTypeName() { return typeid(T).name(); }
 // Custom Type Name Defined Here.
 #define DEFINE_TYPE_NAME(type) \
-    template<>const char *GetTypeName<type>(){return #type;}
+    template<> inline const char *GetTypeName<type>(){return #type;}
 
 DEFINE_TYPE_NAME(bool);
 
@@ -119,8 +119,6 @@ DEFINE_TYPE_NAME(long double);
 DEFINE_TYPE_NAME(std::string);
 
 DEFINE_TYPE_NAME(char *);
-
-DEFINE_TYPE_NAME(char **);
 //================================================================================
 
 // Check whether the type is a pointer.
@@ -304,7 +302,7 @@ template<class Type>
 bool IsCharArray(Type *address)
 {
     bool ret = is_same<char *, typename STIsCharArray<Type>::EleType>::value;
-    MDEBUG("Type of address(%p) is %s : The extracted type is %s, ret = %d", (void*)address, GetTypeName<Type>(),
+    MDEBUG("Type of address(%p) is %s : The extracted type is %s, ret = %d", (void *) address, GetTypeName<Type>(),
            GetTypeName<typename STIsCharArray<Type>::EleType>(), ret);
     // 如果 C 数组经过萃取，两个类型会不一样
     // 而 raw pointer 在萃取之后两个类型相同
@@ -410,7 +408,7 @@ struct TypeData<DOUBLE, T>
             errno = 0;
             return false;
         }
-        bool ret = CheckBounds<T, long, long>(data);
+        bool ret = CheckBounds<T, double, double>(data);
         if (ret) {
             *address = data;
         }
@@ -443,12 +441,12 @@ struct TypeData<CSTRING, T>
         if (!address) {
             return false;
         }
-        size_t len = STIsCharArray<T>::ARR_LEN;
+        unsigned long len = STIsCharArray<T>::ARR_LEN;
         MDEBUG("Char Array Len Is %lu", len);
         memset(static_cast<void *>(address), 0, len * sizeof(char));
-        memcpy(address, str, len * sizeof(char));
-        MDEBUG("Char Array Content Is: %s", address);
-        MDEBUG("Char Array Address(%p)", address);
+        memcpy(address, str, (len * sizeof(char)) - 1);
+        MDEBUG("Char Array Content Is: %s", (const char *)address);
+        MDEBUG("Char Array Address(%p)", (void *)address);
         return true;
     }
 };
@@ -566,7 +564,7 @@ class AutoXML
     }
 
     template<class T>
-    bool IsPointer(T)
+    bool IsPointer(T t)
     {
         AUTOXML_MDEBUG("Type T is %s", GetTypeName<T>());
         if (is_pointer<T>::value) {
@@ -579,7 +577,8 @@ class AutoXML
     template<class T>
     TypeCheckRet TypeCheck(T *address)
     {
-        if (IsPointer(*address)) {
+        AUTOXML_MDEBUG("Type T is %s", GetTypeName<T>());
+        if (IsPointer<T>(*address)) {
             if (IsCharArray(address)) {
                 return TCR_CHAR_ARRAY;
             }
@@ -591,11 +590,9 @@ class AutoXML
 
  private:
     TiXmlDocument m_stDoc;
-
     TiXmlElement *m_pRoot;
 
     const char *m_strCurFile;
-
     size_t m_sizeCurLine;
 };
 }
