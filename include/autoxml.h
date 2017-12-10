@@ -86,7 +86,7 @@
 #error GET_ELEM is already defined
 #else
 #define GET_ELEM(...) \
-    autoxml.GetElemOfPath(__FILE__, __LINE__, ARG_NUM(__VA_ARGS__), ##__VA_ARGS__);
+    autoxml.GetElemOfPathFromRoot(__FILE__, __LINE__, ARG_NUM(__VA_ARGS__), ##__VA_ARGS__);
 #endif
 
 //todo: GET_ELEM_FROM_ELEM(pElem, path)
@@ -266,7 +266,8 @@ template<class To, class Match, class Cur>
 bool CheckBounds(Cur data)
 {
     std::ostringstream oss;
-    if (data > std::numeric_limits<Match>::max()) {
+    if (data > std::numeric_limits<Match>::max())
+    {
         oss << "value " << data
             << " greater than the maximum value(" << std::numeric_limits<Match>::max() << ")"
             << " of MatchType(" << GetTypeName<Match>() << ").";
@@ -274,7 +275,8 @@ bool CheckBounds(Cur data)
         errno = ERANGE;
         return false;
     }
-    if (data > std::numeric_limits<To>::max()) {
+    if (data > std::numeric_limits<To>::max())
+    {
         oss << "value " << data
             << " greater than the maximum value(" << std::numeric_limits<To>::max() << ")"
             << " of Your Data Type(" << GetTypeName<To>() << ").";
@@ -284,10 +286,12 @@ bool CheckBounds(Cur data)
     // the minimal value defined for float, double, long double is a POSITIVE value
     // http://en.cppreference.com/w/cpp/types/climits
     Match match_min = std::numeric_limits<Match>::min();
-    if (is_same<Match, double>::value) {
+    if (is_same<Match, double>::value)
+    {
         match_min = -std::numeric_limits<Match>::max();
     }
-    if (data < match_min) {
+    if (data < match_min)
+    {
         oss << "value " << data
             << " lower than the minimal value(" << std::numeric_limits<Match>::min() << ")"
             << " of MatchType(" << GetTypeName<Match>() << ").";
@@ -296,10 +300,12 @@ bool CheckBounds(Cur data)
         return false;
     }
     To to_min = std::numeric_limits<To>::min();
-    if (is_same<To, double>::value || is_same<To, float>::value || is_same<To, long double>::value) {
+    if (is_same<To, double>::value || is_same<To, float>::value || is_same<To, long double>::value)
+    {
         to_min = -std::numeric_limits<To>::max();
     }
-    if (data < to_min) {
+    if (data < to_min)
+    {
         oss << "value " << static_cast<To>(data)
             << " lower than the minimal value(" << std::numeric_limits<To>::min() << ")"
             << " of Your Data Type(" << GetTypeName<To>() << ").";
@@ -343,15 +349,21 @@ bool IsCharArray(Type *address)
     // 如果 C 数组经过萃取，两个类型会不一样
     // 而 raw pointer 在萃取之后两个类型相同
     // raw pointer 比较危险，不建议使用
-    if (ret) {
-        if (is_same<typename STIsCharArray<Type>::EleType, Type>::value && is_pointer<Type>::value) {
+    if (ret)
+    {
+        if (is_same<typename STIsCharArray<Type>::EleType, Type>::value && is_pointer<Type>::value)
+        {
             MDEBUG(
                 "Type is a char pointer, not a char array. **I Can't Guarantee Memory Security For Raw Pointer Type**");
             return false;
-        } else {
+        }
+        else
+        {
             return true;
         }
-    } else {
+    }
+    else
+    {
         return ret;
     }
 }
@@ -375,7 +387,8 @@ struct TypeData
 {
     bool GetData(const char *str, T *address)
     {
-        if (!address) {
+        if (!address)
+        {
             return false;
         }
         MERROR("Undefined TypeID!");
@@ -388,19 +401,22 @@ struct TypeData<INT, T>
 {
     bool GetData(const char *str, T *address)
     {
-        if (!address) {
+        if (!address)
+        {
             return false;
         }
         char *end = NULL;
         errno = 0;
         long data = strtol(str, &end, 10);
-        if (errno == ERANGE) {
+        if (errno == ERANGE)
+        {
             MERROR("range error, got %ld", data);
             errno = 0;
             return false;
         }
         bool ret = CheckBounds<T, int, long>(data);
-        if (ret) {
+        if (ret)
+        {
             *address = data;
         }
         return ret;
@@ -412,19 +428,22 @@ struct TypeData<LONG, T>
 {
     bool GetData(const char *str, T *address)
     {
-        if (!address) {
+        if (!address)
+        {
             return false;
         }
         char *end = NULL;
         errno = 0;
         long data = strtol(str, &end, 10);
-        if (errno == ERANGE) {
+        if (errno == ERANGE)
+        {
             MERROR("range error, got %ld", data);
             errno = 0;
             return false;
         }
         bool ret = CheckBounds<T, long, long>(data);
-        if (ret) {
+        if (ret)
+        {
             *address = data;
         }
         return ret;
@@ -436,19 +455,22 @@ struct TypeData<DOUBLE, T>
 {
     bool GetData(const char *str, T *address)
     {
-        if (!address) {
+        if (!address)
+        {
             return false;
         }
         char *end = NULL;
         errno = 0;
         double data = strtod(str, &end);
-        if (errno == ERANGE) {
+        if (errno == ERANGE)
+        {
             MERROR("range error, got %lf", data);
             errno = 0;
             return false;
         }
         bool ret = CheckBounds<T, double, double>(data);
-        if (ret) {
+        if (ret)
+        {
             *address = data;
         }
         return ret;
@@ -460,10 +482,12 @@ struct TypeData<STRING, T>
 {
     bool GetData(const char *str, T *address)
     {
-        if (!address) {
+        if (!address)
+        {
             return false;
         }
-        if (is_same<std::string, T>::value) {
+        if (is_same<std::string, T>::value)
+        {
             address->assign(str);
             return true;
         }
@@ -477,7 +501,8 @@ struct TypeData<CSTRING, T>
 {
     bool GetData(const char *str, T *address)
     {
-        if (!address) {
+        if (!address)
+        {
             return false;
         }
         unsigned long len = STIsCharArray<T>::ARR_LEN;
@@ -507,9 +532,12 @@ class AutoXML
         m_stDoc(filename), m_pRoot(NULL), m_strCurFile(), m_sizeCurLine()
     {
         SetFileLine(cur_file, cur_line);
-        if (m_stDoc.LoadFile()) {
+        if (m_stDoc.LoadFile())
+        {
             m_pRoot = m_stDoc.FirstChildElement(root);
-        } else {
+        }
+        else
+        {
             AUTOXML_MERROR("Load File(%s) Error. ID:(%d), Desc(%s)", filename, m_stDoc.ErrorId(), m_stDoc.ErrorDesc());
         }
     }
@@ -517,11 +545,13 @@ class AutoXML
     template<class T>
     bool GetDataFromElem(T *address, TiXmlElement *pElem, const char *strName = NULL)
     {
-        if (!pElem) {
+        if (!pElem)
+        {
             AUTOXML_MERROR("pElem Is NULL.");
             return false;
         }
-        if (!strName) {
+        if (!strName)
+        {
             return GetData(address, pElem->GetText());
         }
         else
@@ -533,23 +563,30 @@ class AutoXML
     template<class T>
     bool GetDataFromParentElem(T *address, TiXmlElement *pElem, const char *strName)
     {
-        if (!pElem) {
+        if (!pElem)
+        {
             AUTOXML_MERROR("pElem Is NULL.");
             return false;
         }
         AUTOXML_MDEBUG("Target Name: %s", strName);
         const char *data = pElem->Attribute(strName);
-        if (!data) {
+        if (!data)
+        {
             pElem = pElem->FirstChildElement(strName);
             data = pElem->GetText();
-            if (!data) {
+            if (!data)
+            {
                 AUTOXML_MERROR("Can't Find Target Name(%s)", strName);
                 return false;
-            } else {
+            }
+            else
+            {
                 MDEBUG("Get Node Data is %s", data);
                 return GetData(address, data);
             }
-        } else {
+        }
+        else
+        {
             MDEBUG("Get Attribute Data is %s", data);
             return GetData(address, data);
         }
@@ -565,114 +602,62 @@ class AutoXML
     {
         va_list args;
         va_start(args, cnt);
-        BuildRelativePath(cnt, args);
+        BuildPath(cnt, args);
         va_end(args);
         SetFileLine(cur_file, cur_line);
         TypeCheckRet ret = TypeCheck(address);
-        if (ret == TCR_POINTER) {
+        if (ret == TCR_POINTER)
+        {
             return false;
         }
-        if (!m_pRoot) {
+        if (!m_pRoot)
+        {
             MERROR("Load Root Element Failed.");
             return false;
         }
-        TiXmlElement *pRElem = GetParentElemOfRelativePath(pElem);
-        return GetDataFromParentElem(address, pRElem, m_vecRelativePath[m_vecRelativePath.size() - 1].c_str());
+        TiXmlElement *pRElem = GetParentElemOfPath(pElem);
+        return GetDataFromParentElem(address, pRElem, m_vecPath[m_vecPath.size() - 1].c_str());
     }
 
     void BuildPath(size_t cnt, va_list args)
     {
         m_vecPath.clear();
-        for (size_t i = 0; i < cnt; ++i) {
+        for (size_t i = 0; i < cnt; ++i)
+        {
             const char *name = va_arg(args, const char*);
             m_vecPath.push_back(name);
         }
-        for (size_t i = 0; i < m_vecPath.size(); ++i) {
+        for (size_t i = 0; i < m_vecPath.size(); ++i)
+        {
             MDEBUG("%s", m_vecPath[i].c_str());
         }
     }
 
-    void BuildRelativePath(size_t cnt, va_list args)
+    TiXmlElement *GetParentElemOfPathFromRoot()
     {
-        m_vecRelativePath.clear();
-        for (size_t i = 0; i < cnt; ++i) {
-            const char *name = va_arg(args, const char*);
-            m_vecRelativePath.push_back(name);
-        }
-        for (size_t i = 0; i < m_vecRelativePath.size(); ++i) {
-            MDEBUG("%s", m_vecRelativePath[i].c_str());
-        }
-    }
-
-    TiXmlElement *GetParentElemOfPath()
-    {
-        if (!m_pRoot) {
+        if (!m_pRoot)
+        {
             MERROR("Load Root Element Failed.");
             return NULL;
         }
 
-        TiXmlElement *pElem = m_pRoot;
-        for (size_t i = 0; i < m_vecPath.size() - 1; ++i) {
-            const char *name = m_vecPath[i].c_str();
-            AUTOXML_MDEBUG("Current Name: %s", name);
-            // 如果是最后一个节点，就考虑找 Attr 或者 GetText
-            if (i + 1 == m_vecPath.size()) {
-                return pElem;
-            } else {
-                // 否则就向下寻找 Element 节点
-                pElem = pElem->FirstChildElement(name);
-                if (!pElem) {
-                    AUTOXML_MERROR("Can't Find Child Element(%s)", name);
-                    return NULL;
-                }
-            }
-        }
-        return pElem;
+        return GetParentElemOfPath(m_pRoot);
     }
 
-    TiXmlElement *GetParentElemOfRelativePath(TiXmlElement *pElem)
-    {
-        if (!m_pRoot) {
-            MERROR("Load Root Element Failed.");
-            return NULL;
-        }
-
-        TiXmlElement *pRElem = pElem;
-        for (size_t i = 0; i < m_vecRelativePath.size() - 1; ++i) {
-            const char *name = m_vecRelativePath[i].c_str();
-            AUTOXML_MDEBUG("Current Name: %s", name);
-            pRElem = pRElem->FirstChildElement(name);
-            if (!pRElem) {
-                AUTOXML_MERROR("Can't Find Child Element(%s)", name);
-                return NULL;
-            }
-        }
-        return pRElem;
-    }
-
-    TiXmlElement *GetElemOfPath(const char *cur_file, size_t cur_line, size_t cnt, ...)
+    TiXmlElement *GetElemOfPathFromRoot(const char *cur_file, size_t cur_line, size_t cnt, ...)
     {
         va_list args;
         va_start(args, cnt);
         BuildPath(cnt, args);
         va_end(args);
         SetFileLine(cur_file, cur_line);
-        if (!m_pRoot) {
+        if (!m_pRoot)
+        {
             MERROR("Load Root Element Failed.");
             return NULL;
         }
 
-        TiXmlElement *pElem = m_pRoot;
-        for (size_t i = 0; i < m_vecPath.size(); ++i) {
-            const char *name = m_vecPath[i].c_str();
-            AUTOXML_MDEBUG("Current Name: %s", name);
-            pElem = pElem->FirstChildElement(name);
-            if (!pElem) {
-                AUTOXML_MERROR("Can't Find Child Element(%s)", name);
-                return NULL;
-            }
-        }
-        return pElem;
+        return GetElemOfPath(m_pRoot);
     }
 
     TiXmlElement *GetElemOfPathFromElem(TiXmlElement *_pElem, const char *cur_file, size_t cur_line, size_t cnt, ...)
@@ -682,22 +667,13 @@ class AutoXML
         BuildPath(cnt, args);
         va_end(args);
         SetFileLine(cur_file, cur_line);
-        if (!m_pRoot) {
+        if (!m_pRoot)
+        {
             MERROR("Load Root Element Failed.");
             return NULL;
         }
 
-        TiXmlElement *pElem = _pElem;
-        for (size_t i = 0; i < m_vecPath.size(); ++i) {
-            const char *name = m_vecPath[i].c_str();
-            AUTOXML_MDEBUG("Current Name: %s", name);
-            pElem = pElem->FirstChildElement(name);
-            if (!pElem) {
-                AUTOXML_MERROR("Can't Find Child Element(%s)", name);
-                return NULL;
-            }
-        }
-        return pElem;
+        return GetElemOfPath(_pElem);
     }
 
     // Bind variable to a path
@@ -710,15 +686,17 @@ class AutoXML
         va_end(args);
         SetFileLine(cur_file, cur_line);
         TypeCheckRet ret = TypeCheck(address);
-        if (ret == TCR_POINTER) {
+        if (ret == TCR_POINTER)
+        {
             return false;
         }
-        if (!m_pRoot) {
+        if (!m_pRoot)
+        {
             MERROR("Load Root Element Failed.");
             return false;
         }
 
-        TiXmlElement *pElem = GetParentElemOfPath();
+        TiXmlElement *pElem = GetParentElemOfPathFromRoot();
         return GetDataFromParentElem(address, pElem, m_vecPath[m_vecPath.size() - 1].c_str());
     }
 
@@ -730,23 +708,70 @@ class AutoXML
         // to deal with error: explicit specialization in non-namespace scope
         // https://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
         AUTOXML_MDEBUG("Read Data.");
-        if (!address || !data) {
+        if (!address || !data)
+        {
             MERROR("pointer is NULL");
             return false;
         }
-        if (IsCharArray(address)) {
+        if (IsCharArray(address))
+        {
             TypeData<CSTRING, T> typedata;
             return typedata.GetData(data, address);
-        } else {
+        }
+        else
+        {
             const int type_id = best_match<T>::value;
             MDEBUG("Best Match ID Is:(%d: %s)", type_id, types[type_id].c_str());
-            if (type_id == OTHER) {
+            if (type_id == OTHER)
+            {
                 MDEBUG("Type ID Is OTHER");
                 return false;
             }
             TypeData<type_id, T> typedata;
             return typedata.GetData(data, address);
         }
+    }
+
+    TiXmlElement *GetElemOfPath(TiXmlElement *pStartElem)
+    {
+        if (m_vecPath.empty())
+        {
+            AUTOXML_MERROR("Path is Empty.");
+        }
+        return GetElemOfPathWithLen(pStartElem, m_vecPath.size());
+    }
+
+    TiXmlElement *GetParentElemOfPath(TiXmlElement *pStartElem)
+    {
+        if (m_vecPath.empty())
+        {
+            AUTOXML_MERROR("Path is Empty.");
+        }
+        return GetElemOfPathWithLen(pStartElem, m_vecPath.size() - 1);
+    }
+
+    TiXmlElement *GetElemOfPathWithLen(TiXmlElement *pStartElem, size_t len)
+    {
+        TiXmlElement *pElem = pStartElem;
+        for (size_t i = 0; i < len; ++i)
+        {
+            const char *name = m_vecPath[i].c_str();
+            AUTOXML_MDEBUG("Current Name: %s", name);
+            if (strcmp(name, "..") == 0)
+            {
+                pElem = dynamic_cast<TiXmlElement *>(pElem->Parent());
+            }
+            else
+            {
+                pElem = pElem->FirstChildElement(name);
+                if (!pElem)
+                {
+                    AUTOXML_MERROR("Can't Find Child Element(%s)", name);
+                    return NULL;
+                }
+            }
+        }
+        return pElem;
     }
 
     //Modifier
@@ -756,11 +781,13 @@ class AutoXML
         m_sizeCurLine = cur_line;
     }
 
+    //Checker
     template<class T>
     bool IsPointer(T t)
     {
         AUTOXML_MDEBUG("Type T is %s", GetTypeName<T>());
-        if (is_pointer<T>::value) {
+        if (is_pointer<T>::value)
+        {
             MERROR("address is a pointer, error.");
             return true;
         }
@@ -771,12 +798,16 @@ class AutoXML
     TypeCheckRet TypeCheck(T *address)
     {
         AUTOXML_MDEBUG("Type T is %s", GetTypeName<T>());
-        if (IsPointer<T>(*address)) {
-            if (IsCharArray(address)) {
+        if (IsPointer<T>(*address))
+        {
+            if (IsCharArray(address))
+            {
                 return TCR_CHAR_ARRAY;
             }
             return TCR_POINTER;
-        } else {
+        }
+        else
+        {
             return TCR_OTHER;
         }
     }
@@ -785,7 +816,6 @@ class AutoXML
     TiXmlDocument m_stDoc;
     TiXmlElement *m_pRoot;
     std::vector<std::string> m_vecPath;
-    std::vector<std::string> m_vecRelativePath;
 
     const char *m_strCurFile;
     size_t m_sizeCurLine;

@@ -31,3 +31,13 @@ TEST(autoxml__Test, read_Element_From_Element)
     BIND_ELEM(&iValue, pElemInside, "Value")
     EXPECT_EQ(iValue, eq_iValue);
 }
+
+TEST(autoxml__Test, read_RelativePath_Back)
+{
+    AUTO_XML("xml4test.xml", "document");
+    TiXmlElement *pElem = GET_ELEM("Test")
+    TiXmlElement *pElemInside = GET_ELEM_FROM_ELEM(pElem, "Inside", "..", "Inside");
+    int iValue = 0, eq_iValue = 233;
+    BIND_ELEM(&iValue, pElemInside, "Value")
+    EXPECT_EQ(iValue, eq_iValue);
+}
